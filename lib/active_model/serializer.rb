@@ -69,6 +69,11 @@ module ActiveModel
     class_attribute :cache
     class_attribute :perform_caching
 
+    ##
+    # Make sure the serialized result has these attributes when filtering the attributes through context-params
+    class_attribute :required_attributes
+    self.required_attributes = [:id]
+
     class << self
       # set perform caching like root
       def cached(value = true)
@@ -478,7 +483,28 @@ module ActiveModel
       return nil if @object.nil?
       @node = attributes
       include_associations! if _embed
+      filter_attributes
       @node
+    end
+
+    ##
+    # If the options contain a :context attribute responding to :params which actually has a non-empty :fields element,
+    # providing a non empty array when splitted by commas, extend that list of attibutes by the required attributes and
+    # slice the current @node to those attributes.
+    #
+    # Example:
+    #   options[:context][:params][:fields] = 'first_name,last_name'
+    #   self.class.required_attributes = [:id]
+    #
+    #   @node will only hold keys :id, :first_name, :last_name (if it had those keys before already)
+    def filter_attributes
+      return unless @options.include?(:context) && @options[:context].try(:params).present? && @options[:context].params[:fields].present?
+
+      fields = @options[:context].params[:fields].split(',').map(&:strip).map(&:to_sym)
+      if fields.any?
+        fields += self.class.required_attributes
+        @node.slice!(*fields.uniq)
+      end
     end
 
     def perform_caching?

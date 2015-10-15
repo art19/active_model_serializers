@@ -42,6 +42,7 @@ module ActionController
 
     [:_render_option_json, :_render_with_renderer_json].each do |renderer_method|
       define_method renderer_method do |resource, options|
+        options.fetch(:context) { options[:context] = request }
         json = ActiveModel::Serializer.build_json(self, resource, options)
 
         if json
