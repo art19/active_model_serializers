@@ -331,7 +331,7 @@ module ActiveModel
 
     def to_json(*args)
       if perform_caching?
-        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, 'to-json']) do
+        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, filtered_attributes, 'to-json'].flatten) do
           super
         end
       else
@@ -359,7 +359,7 @@ module ActiveModel
     # object without the root.
     def serializable_hash
       if perform_caching?
-        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, 'serializable-hash']) do
+        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, filtered_attributes, 'serializable-hash'].flatten) do
           _serializable_hash
         end
       else
@@ -483,28 +483,31 @@ module ActiveModel
       return nil if @object.nil?
       @node = attributes
       include_associations! if _embed
-      filter_attributes
+      attrs = filtered_attributes
+      @node.slice!(*attrs) if attrs.any?
       @node
     end
 
     ##
+    # Figure out if the attributes need to be filtered based on the current context's params
+    #
     # If the options contain a :context attribute responding to :params which actually has a non-empty :fields element,
-    # providing a non empty array when splitted by commas, extend that list of attibutes by the required attributes and
-    # slice the current @node to those attributes.
+    # providing a non empty array when splitted by commas, extend that list of attibutes by the required attributes.
     #
     # Example:
     #   options[:context][:params][:fields] = 'first_name,last_name'
     #   self.class.required_attributes = [:id]
+    #   The result will be [:first_name, :id, :last_name]
     #
-    #   @node will only hold keys :id, :first_name, :last_name (if it had those keys before already)
-    def filter_attributes
-      return unless @options.include?(:context) && @options[:context].try(:params).present? && @options[:context].params[:fields].present?
+    # @return [Array<Symbol>]
+    #    If filtering is needed, return an ordered list of attributes to filter the serialized result for
+    def filtered_attributes
+      return [] unless @options.include?(:context) && @options[:context].try(:params).present? && @options[:context].params[:fields].present?
 
       fields = @options[:context].params[:fields].split(',').map(&:strip).map(&:to_sym)
-      if fields.any?
-        fields += self.class.required_attributes
-        @node.slice!(*fields.uniq)
-      end
+      fields += self.class.required_attributes if fields.any?
+
+      fields.uniq.sort
     end
 
     def perform_caching?
