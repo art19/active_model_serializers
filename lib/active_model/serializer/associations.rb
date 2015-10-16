@@ -91,9 +91,9 @@ module ActiveModel
 
         def find_serializable(object)
           if target_serializer
-            target_serializer.new(object, source_serializer.options)
+            target_serializer.new(object, source_serializer.options.except(:context))
           elsif object.respond_to?(:active_model_serializer) && (ams = object.active_model_serializer)
-            ams.new(object, source_serializer.options)
+            ams.new(object, source_serializer.options.except(:context))
           else
             object
           end
