@@ -376,6 +376,8 @@ module ActiveModel
     def include?(name)
       return false if @options.key?(:only) && !Array(@options[:only]).include?(name)
       return false if @options.key?(:except) && Array(@options[:except]).include?(name)
+      filtered = filtered_attributes
+      return false if filtered.any? && !filtered.include?(name)
       send INCLUDE_METHODS[name]
     end
 
@@ -483,8 +485,6 @@ module ActiveModel
       return nil if @object.nil?
       @node = attributes
       include_associations! if _embed
-      attrs = filtered_attributes
-      @node.slice!(*attrs) if attrs.any?
       @node
     end
 
