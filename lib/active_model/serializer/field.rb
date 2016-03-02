@@ -25,6 +25,8 @@ module ActiveModel
       # @api private
       #
       def excluded?(serializer)
+        return true if serializer.unpermitted_attribute?(name)
+
         case condition_type
         when :if
           !serializer.public_send(condition)
