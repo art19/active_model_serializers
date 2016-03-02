@@ -95,6 +95,8 @@ module ActiveModel
       def build_association(subject, parent_serializer_options)
         association_value = value(subject)
         reflection_options = options.dup
+        reflection_options.merge({ serializer_namespace: parent_serializer_options.fetch(:serializer_namespace, nil) }.compact)
+
         serializer_class = subject.class.serializer_for(association_value, reflection_options)
         reflection_options[:include_data] = @_include_data
 

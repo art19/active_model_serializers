@@ -37,7 +37,7 @@ module ActiveModel
       elsif resource.respond_to?(:to_ary)
         config.collection_serializer
       else
-        options.fetch(:serializer) { get_serializer_for(resource.class) }
+        options.fetch(:serializer) { get_serializer_for(resource.class, options) }
       end
     end
 
@@ -49,7 +49,7 @@ module ActiveModel
     end
 
     # @api private
-    def self.serializer_lookup_chain_for(klass)
+    def self.serializer_lookup_chain_for(klass, serializer_namespace = nil)
       chain = []
 
       resource_class_name = klass.name.demodulize
@@ -57,9 +57,15 @@ module ActiveModel
       serializer_class_name = "#{resource_class_name}Serializer"
 
       chain.push("#{name}::#{serializer_class_name}") if self != ActiveModel::Serializer
+
+      if serializer_namespace.present?
+        chain.push([[serializer_namespace, resource_namespace].reject(&:blank?), serializer_class_name].join('::'))
+        chain.push([serializer_namespace, serializer_class_name].join('::'))
+      end
+
       chain.push("#{resource_namespace}::#{serializer_class_name}")
 
-      chain
+      chain.uniq
     end
 
     # Used to cache serializer name => serializer class
@@ -74,16 +80,18 @@ module ActiveModel
     #   1. class name appended with "Serializer"
     #   2. try again with superclass, if present
     #   3. nil
-    def self.get_serializer_for(klass)
+    def self.get_serializer_for(klass, options = {})
       return nil unless config.serializer_lookup_enabled
-      serializers_cache.fetch_or_store(klass) do
+      serializer_namespace = options.fetch(:serializer_namespace, nil)
+
+      serializers_cache.fetch_or_store([klass, serializer_namespace].compact) do
         # NOTE(beauby): When we drop 1.9.3 support we can lazify the map for perfs.
         serializer_class = serializer_lookup_chain_for(klass).map(&:safe_constantize).find { |x| x && x < ActiveModel::Serializer }
 
         if serializer_class
           serializer_class
         elsif klass.superclass
-          get_serializer_for(klass.superclass)
+          get_serializer_for(klass.superclass, options)
         end
       end
     end
@@ -129,6 +137,25 @@ module ActiveModel
       else
         object.read_attribute_for_serialization(attr)
       end
+    end
+
+    ##
+    # @return [ApplicationPolicy] A policy class for the serializer's object using the current scope
+    def policy
+      return nil unless defined?(Pundit)
+      @pundit_policy ||= Pundit.policy(scope, object)
+    end
+
+    ##
+    # Figure out if the serializer is allowed to serialize an attribute/association
+    #
+    # @param name [String, Symbol]
+    #     Name of the attribute/association
+    #
+    # @return [Boolean]
+    #     true, if the serializer has access to a policy and the policy considers the attribute unpermitted.
+    def unpermitted_attribute?(name)
+      policy.present? && policy.respond_to?(:unpermitted_attribute?) && policy.unpermitted_attribute?(name)
     end
 
     protected
