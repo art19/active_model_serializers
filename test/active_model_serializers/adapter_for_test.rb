@@ -102,7 +102,8 @@ module ActiveModelSerializers
         'null'.freeze              => ActiveModelSerializers::Adapter::Null,
         'json'.freeze              => ActiveModelSerializers::Adapter::Json,
         'attributes'.freeze => ActiveModelSerializers::Adapter::Attributes,
-        'json_api'.freeze => ActiveModelSerializers::Adapter::JsonApi
+        'json_api'.freeze => ActiveModelSerializers::Adapter::JsonApi,
+        'art19_ember_data'.freeze => ActiveModelSerializers::Adapter::Art19EmberData
       }
       actual = ActiveModelSerializers::Adapter.adapter_map
       assert_equal actual, expected_adapter_map
@@ -110,6 +111,7 @@ module ActiveModelSerializers
 
     def test_adapters
       assert_equal ActiveModelSerializers::Adapter.adapters.sort, [
+        'art19_ember_data'.freeze,
         'attributes'.freeze,
         'json'.freeze,
         'json_api'.freeze,

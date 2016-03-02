@@ -89,5 +89,6 @@ module ActiveModelSerializers
     require 'active_model_serializers/adapter/attributes'
     require 'active_model_serializers/adapter/json'
     require 'active_model_serializers/adapter/json_api'
+    require 'active_model_serializers/adapter/art19_ember_data'
   end
 end
