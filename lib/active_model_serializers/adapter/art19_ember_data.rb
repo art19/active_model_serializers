@@ -1,6 +1,16 @@
 module ActiveModelSerializers
   module Adapter
+    ##
+    # JSON serializer adapter which supports side loaded associations currently expeded
+    # by ART19's ember data version.
     class Art19EmberData < Base
+      ##
+      # Generate a hash of attributes for the current serializer
+      #
+      # @param options [Hash]
+      #     Options to pass along to the Attributes collection's serializable_hash method
+      #
+      # @return [Hash] the hash of attributes
       def serializable_hash(options = {})
         instance_options[:root] = options.delete(:root) if options.present? && options.key?(:root)
 
@@ -34,6 +44,9 @@ module ActiveModelSerializers
 
       protected
 
+      ##
+      # Add pagination meta data to the instance options hash, if the current option carries
+      # such meta data.
       def add_pagination_meta
         object = serializer.object
 
