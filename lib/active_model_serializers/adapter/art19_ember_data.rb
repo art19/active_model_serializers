@@ -99,20 +99,20 @@ module ActiveModelSerializers
       end
 
       ##
-      # Determine the name of the root node. For collection serializers this is the value of #json_key,
-      # which is either the passed in :root option, or if none is given the option's model name. For single resource
-      # serializers we try to derive the name from the serializer class itself, with fallbacks to the model name or the
-      # inherited #json_key
+      # Determine the name of the root node. For collection serializers we use the element-serializer class.
+      # The root node is taken from the serializer class name if available, and if not from the serializer's object
+      # base class.
       #
       # @return [String] the name of the root node
       def root
-        if collection?
-          super.to_s
-        else
-          root_name = serializer.class.name.demodulize.underscore.sub(/_serializer\z/, '') unless serializer.class.name.blank?
-          root_name ||= derived_class.try(:model_name).try(:element)
-          root_name ||= super.to_s
-        end
+        element_serializer = collection? ? serializer.first : serializer
+
+        root_name = element_serializer.class.name.demodulize.underscore.sub(/_serializer\z/, '') if element_serializer.present?
+        root_name ||= derived_class.try(:model_name).try(:element)
+        root_name ||= super.to_s
+
+        return root_name.pluralize if collection?
+        root_name
       end
     end
   end
