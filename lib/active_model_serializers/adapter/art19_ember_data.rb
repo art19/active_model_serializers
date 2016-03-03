@@ -12,8 +12,6 @@ module ActiveModelSerializers
       #
       # @return [Hash] the hash of attributes
       def serializable_hash(options = {})
-        instance_options[:root] = options.delete(:root) if options.present? && options.key?(:root)
-
         # Serialize as per usual
         serialized = Attributes.new(serializer, instance_options).serializable_hash(options)
 
@@ -24,7 +22,7 @@ module ActiveModelSerializers
         # Add pagination if collection is paginated
         add_pagination_meta if collection?
 
-        if instance_options.fetch(:root, true)
+        if serializer.root != false
           # Make included associations siblings of root to keep ED happy.
           serialized   = { root => serialized }
           root_node    = serialized[root]
@@ -32,11 +30,7 @@ module ActiveModelSerializers
           return serialized unless root_node.present?
 
           extract_keys = included_association_keys
-          if root_node.is_a? Array
-            root_node.each { |obj| extract_included_assocations(serialized, obj, extract_keys) }
-          else
-            extract_included_assocations(serialized, root_node, extract_keys)
-          end
+          [root_node].flatten.each { |obj| extract_included_assocations(serialized, obj, extract_keys) }
         end
 
         serialized
@@ -73,15 +67,18 @@ module ActiveModelSerializers
         end
       end
 
+      ##
+      # @return [Enumerator] List of associations linked to the current serializer (or it's item serializer if it's a collection)
       def associations
         unless collection?
           serializer.associations
         else
-          serializer_class = ActiveModel::Serializer.serializer_for(serializer.object.first)
-          serializer_class.new(serializer.object.first).associations
+          serializer.first.associations
         end
       end
 
+      ##
+      # @return [Boolean] true, if the serializer is a collection serializer
       def collection?
         serializer.respond_to? :each
       end
@@ -95,16 +92,27 @@ module ActiveModelSerializers
         end
       end
 
+      ##
+      # @return [Array<String>] Names of all associations marked to be :included (side-loaded)
       def included_association_keys
         associations.select { |a| a.options.fetch(:include, false) }.collect(&:name)
       end
 
+      ##
+      # Determine the name of the root node. For collection serializers this is the value of #json_key,
+      # which is either the passed in :root option, or if none is given the option's model name. For single resource
+      # serializers we try to derive the name from the serializer class itself, with fallbacks to the model name or the
+      # inherited #json_key
+      #
+      # @return [String] the name of the root node
       def root
-        klass = derived_class
-        name  = klass.try(:model_name).try(:element) || super.to_s
-
-        return name unless collection?
-        name.pluralize
+        if collection?
+          super.to_s
+        else
+          root_name = serializer.class.name.demodulize.underscore.sub(/_serializer\z/, '') unless serializer.class.name.blank?
+          root_name ||= derived_class.try(:model_name).try(:element)
+          root_name ||= super.to_s
+        end
       end
     end
   end
