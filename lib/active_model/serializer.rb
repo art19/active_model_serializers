@@ -86,7 +86,7 @@ module ActiveModel
 
       serializers_cache.fetch_or_store([klass, serializer_namespace].compact) do
         # NOTE(beauby): When we drop 1.9.3 support we can lazify the map for perfs.
-        serializer_class = serializer_lookup_chain_for(klass).map(&:safe_constantize).find { |x| x && x < ActiveModel::Serializer }
+        serializer_class = serializer_lookup_chain_for(klass, serializer_namespace).map(&:safe_constantize).find { |x| x && x < ActiveModel::Serializer }
 
         if serializer_class
           serializer_class
@@ -155,7 +155,8 @@ module ActiveModel
     # @return [Boolean]
     #     true, if the serializer has access to a policy and the policy considers the attribute unpermitted.
     def unpermitted_attribute?(name)
-      policy.present? && policy.respond_to?(:unpermitted_attribute?) && policy.unpermitted_attribute?(name)
+      policy.present? && policy.respond_to?(:unpermitted_attribute_for_reading?) &&
+                         policy.unpermitted_attribute_for_reading?(name, instance_options[:serializer_namespace])
     end
 
     protected
