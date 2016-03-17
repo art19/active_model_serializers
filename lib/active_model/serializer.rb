@@ -142,7 +142,7 @@ module ActiveModel
     ##
     # @return [ApplicationPolicy] A policy class for the serializer's object using the current scope
     def policy
-      return nil unless defined?(Pundit)
+      return nil unless defined?(Pundit) && instance_options[:skip_policy] != true
       @pundit_policy ||= Pundit.policy(scope, object)
     end
 
