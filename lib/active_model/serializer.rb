@@ -11,6 +11,7 @@ require 'active_model/serializer/lint'
 require 'active_model/serializer/links'
 require 'active_model/serializer/meta'
 require 'active_model/serializer/type'
+require 'new_relic/agent/method_tracer'
 
 # ActiveModel::Serializer is an abstract class that is
 # reified when subclassed to decorate a resource.
@@ -23,6 +24,7 @@ module ActiveModel
     include Links
     include Meta
     include Type
+    include ::NewRelic::Agent::MethodTracer
 
     # @param resource [ActiveRecord::Base, ActiveModelSerializers::Model]
     # @return [ActiveModel::Serializer]
@@ -40,6 +42,7 @@ module ActiveModel
         options.fetch(:serializer) { get_serializer_for(resource.class, options) }
       end
     end
+    add_method_tracer :serializer_for
 
     # @see ActiveModelSerializers::Adapter.lookup
     # Deprecated
@@ -67,6 +70,7 @@ module ActiveModel
 
       chain.uniq
     end
+    add_method_tracer :serializer_lookup_chain_for
 
     # Used to cache serializer name => serializer class
     # when looked up by Serializer.get_serializer_for.
@@ -95,6 +99,7 @@ module ActiveModel
         end
       end
     end
+    add_method_tracer :serializer_lookup_chain_for
 
     def self._serializer_instance_method_defined?(name)
       _serializer_instance_methods.include?(name)
@@ -145,6 +150,7 @@ module ActiveModel
       return nil unless defined?(Pundit) && instance_options[:skip_policy] != true
       @pundit_policy ||= Pundit.policy(scope, object)
     end
+    add_method_tracer :policy
 
     ##
     # Figure out if the serializer is allowed to serialize an attribute/association
@@ -158,6 +164,7 @@ module ActiveModel
       policy.present? && policy.respond_to?(:unpermitted_attribute_for_reading?) &&
                          policy.unpermitted_attribute_for_reading?(name, instance_options[:serializer_namespace])
     end
+    add_method_tracer :unpermitted_attribute?
 
     protected
 

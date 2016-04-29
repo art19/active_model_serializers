@@ -1,5 +1,9 @@
+require 'new_relic/agent/method_tracer'
+
 module ActiveModel
   class Serializer
+    include ::NewRelic::Agent::MethodTracer
+
     # Holds all the meta-data about a field (i.e. attribute or association) as it was
     # specified in the ActiveModel::Serializer class.
     # Notice that the field block is evaluated in the context of the serializer.
@@ -17,6 +21,7 @@ module ActiveModel
           serializer.read_attribute_for_serialization(name)
         end
       end
+      add_method_tracer :value
 
       # Decide whether the field should be serialized by the given serializer instance.
       # @param [Serializer] The serializer instance
@@ -36,6 +41,7 @@ module ActiveModel
           false
         end
       end
+      add_method_tracer :excluded?
 
       private
 

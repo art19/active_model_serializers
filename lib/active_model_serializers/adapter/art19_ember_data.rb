@@ -1,9 +1,13 @@
+require 'new_relic/agent/method_tracer'
+
 module ActiveModelSerializers
   module Adapter
     ##
     # JSON serializer adapter which supports side loaded associations currently expeded
     # by ART19's ember data version.
     class Art19EmberData < Base
+      include ::NewRelic::Agent::MethodTracer
+
       ##
       # Generate a hash of attributes for the current serializer
       #
@@ -35,6 +39,7 @@ module ActiveModelSerializers
 
         serialized
       end
+      add_method_tracer :serializable_hash
 
       protected
 
@@ -56,6 +61,7 @@ module ActiveModelSerializers
 
         instance_options
       end
+      add_method_tracer :add_pagination_meta
 
       def extract_included_assocations(json, obj, keys = [])
         obj.each do |key, value|
@@ -66,6 +72,7 @@ module ActiveModelSerializers
           end
         end
       end
+      add_method_tracer :extract_included_assocations
 
       ##
       # @return [Enumerator] List of associations linked to the current serializer (or it's item serializer if it's a collection)
@@ -76,6 +83,7 @@ module ActiveModelSerializers
           serializer.first.associations
         end
       end
+      add_method_tracer :assocations
 
       ##
       # @return [Boolean] true, if the serializer is a collection serializer
@@ -91,12 +99,14 @@ module ActiveModelSerializers
           serializer.object.class.try(:base_class) || serializer.object.class
         end
       end
+      add_method_tracer :derived_class
 
       ##
       # @return [Array<String>] Names of all associations marked to be :included (side-loaded)
       def included_association_keys
         associations.select { |a| a.options.fetch(:include, false) }.collect(&:name)
       end
+      add_method_tracer :included_association_keys
 
       ##
       # Determine the name of the root node. For collection serializers we use the element-serializer class.
@@ -114,6 +124,7 @@ module ActiveModelSerializers
         return root_name.pluralize if collection?
         root_name
       end
+      add_method_tracer :root
     end
   end
 end
