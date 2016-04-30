@@ -1,6 +1,10 @@
+require 'new_relic/agent/method_tracer'
+
 module ActiveModelSerializers
   module Adapter
     class CachedSerializer
+      include ::NewRelic::Agent::MethodTracer
+
       def initialize(serializer)
         @cached_serializer = serializer
         @klass             = @cached_serializer.class
@@ -17,14 +21,17 @@ module ActiveModelSerializers
           yield
         end
       end
+      add_method_tracer :cache_check
 
       def cached?
         @klass._cache && !@klass._cache_only && !@klass._cache_except
       end
+      add_method_tracer :cached?
 
       def fragment_cached?
         @klass._cache && (@klass._cache_only && !@klass._cache_except || !@klass._cache_only && @klass._cache_except)
       end
+      add_method_tracer :fragment_cached?
 
       def cache_key
         return @cache_key if defined?(@cache_key)
@@ -34,12 +41,14 @@ module ActiveModelSerializers
         parts << @klass._cache_digest unless @klass._cache_options && @klass._cache_options[:skip_digest]
         @cache_key = parts.join('/')
       end
+      add_method_tracer :cache_key
 
       def object_cache_key
         object_time_safe = @cached_serializer.object.updated_at
         object_time_safe = object_time_safe.strftime('%Y%m%d%H%M%S%9N') if object_time_safe.respond_to?(:strftime)
         (@klass._cache_key) ? "#{@klass._cache_key}/#{@cached_serializer.object.id}-#{object_time_safe}" : @cached_serializer.object.cache_key
       end
+      add_method_tracer :object_cache_key
 
       # find all cache_key for the collection_serializer
       # @param collection_serializer
@@ -71,6 +80,11 @@ module ActiveModelSerializers
 
         cached_serializer = new(serializer)
         cached_serializer.cached? ? cached_serializer.cache_key : nil
+      end
+
+      class << self
+        add_method_tracer :object_cache_keys, 'ActiveModelSerializers::Adapter::CachedSerializer.object_cache_keys'
+        add_method_tracer :object_cache_key, 'ActiveModelSerializers::Adapter::CachedSerializer.object_cache_key'
       end
     end
   end

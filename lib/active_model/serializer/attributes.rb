@@ -22,6 +22,7 @@ module ActiveModel
             hash[key] = attr.value(self)
           end
         end
+        add_method_tracer :attributes
       end
 
       module ClassMethods

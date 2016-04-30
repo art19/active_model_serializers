@@ -42,7 +42,6 @@ module ActiveModel
         options.fetch(:serializer) { get_serializer_for(resource.class, options) }
       end
     end
-    add_method_tracer :serializer_for
 
     # @see ActiveModelSerializers::Adapter.lookup
     # Deprecated
@@ -70,7 +69,6 @@ module ActiveModel
 
       chain.uniq
     end
-    add_method_tracer :serializer_lookup_chain_for
 
     # Used to cache serializer name => serializer class
     # when looked up by Serializer.get_serializer_for.
@@ -99,7 +97,12 @@ module ActiveModel
         end
       end
     end
-    add_method_tracer :serializer_lookup_chain_for
+
+    class << self
+      add_method_tracer :serializer_for
+      add_method_tracer :serializer_lookup_chain_for
+      add_method_tracer :get_serializer_for
+    end
 
     def self._serializer_instance_method_defined?(name)
       _serializer_instance_methods.include?(name)
@@ -128,6 +131,7 @@ module ActiveModel
         end
       end
     end
+    add_method_tracer :initialize
 
     # Used by adapter as resource root.
     def json_key
@@ -143,6 +147,7 @@ module ActiveModel
         object.read_attribute_for_serialization(attr)
       end
     end
+    add_method_tracer :read_attribute_for_serialization
 
     ##
     # @return [ApplicationPolicy] A policy class for the serializer's object using the current scope
@@ -161,8 +166,9 @@ module ActiveModel
     # @return [Boolean]
     #     true, if the serializer has access to a policy and the policy considers the attribute unpermitted.
     def unpermitted_attribute?(name)
-      policy.present? && policy.respond_to?(:unpermitted_attribute_for_reading?) &&
-                         policy.unpermitted_attribute_for_reading?(name, instance_options[:serializer_namespace])
+      pc = policy
+      pc.present? && pc.respond_to?(:unpermitted_attribute_for_reading?) &&
+                     pc.unpermitted_attribute_for_reading?(name, instance_options[:serializer_namespace])
     end
     add_method_tracer :unpermitted_attribute?
 
