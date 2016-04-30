@@ -1,9 +1,12 @@
 require 'set'
 require 'active_model_serializers/adapter'
+require 'new_relic/agent/method_tracer'
+
 module ActiveModel
   class SerializableResource
     ADAPTER_OPTION_KEYS = Set.new([:include, :fields, :adapter, :meta, :meta_key, :links])
     include ActiveModelSerializers::Logging
+    include ::NewRelic::Agent::MethodTracer
 
     delegate :serializable_hash, :as_json, :to_json, to: :adapter
     notify :serializable_hash, :render
@@ -34,6 +37,7 @@ module ActiveModel
       @adapter ||= ActiveModelSerializers::Adapter.create(serializer_instance, adapter_opts)
     end
     alias_method :adapter_instance, :adapter
+    add_method_tracer :adapter
 
     def serializer_instance
       @serializer_instance ||= serializer.new(resource, serializer_opts)
@@ -55,6 +59,7 @@ module ActiveModel
         end
     end
     alias_method :serializer_class, :serializer
+    add_method_tracer :serializer
 
     # True when no explicit adapter given, or explicit appear is truthy (non-nil)
     # False when explicit adapter is falsy (nil or false)
