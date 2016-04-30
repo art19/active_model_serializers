@@ -99,6 +99,8 @@ module ActiveModel
     end
 
     class << self
+      include ::NewRelic::Agent::MethodTracer
+
       add_method_tracer :serializer_for
       add_method_tracer :serializer_lookup_chain_for
       add_method_tracer :get_serializer_for

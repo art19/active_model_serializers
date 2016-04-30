@@ -9,6 +9,7 @@ module ActiveModel
           self._attributes_data ||= {}
         end
 
+        include ::NewRelic::Agent::MethodTracer
         extend ActiveSupport::Autoload
         autoload :Attribute
 

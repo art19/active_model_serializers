@@ -83,6 +83,8 @@ module ActiveModelSerializers
       end
 
       class << self
+        include ::NewRelic::Agent::MethodTracer
+
         add_method_tracer :object_cache_keys, 'ActiveModelSerializers::Adapter::CachedSerializer.object_cache_keys'
         add_method_tracer :object_cache_key, 'ActiveModelSerializers::Adapter::CachedSerializer.object_cache_key'
       end
