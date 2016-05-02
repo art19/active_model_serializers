@@ -16,10 +16,9 @@ module ActiveModel
         # by the serializer.
         def attributes(requested_attrs = nil, reload = false)
           @attributes = nil if reload
-          @attributes ||= self.class._attributes_data.each_with_object({}) do |(key, attr), hash|
-            next if attr.excluded?(self)
-            next unless requested_attrs.nil? || requested_attrs.include?(key)
-            hash[key] = attr.value(self)
+          @attributes ||= permitted_attributes_filtered(requested_attrs, reload).each_with_object({}) do |key, hash|
+            attr = self.class._attributes_data[key]
+            hash[key] = attr.value(self) if attr.present?
           end
         end
       end

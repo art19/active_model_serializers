@@ -159,6 +159,53 @@ module ActiveModel
                          policy.unpermitted_attribute_for_reading?(name, instance_options[:serializer_namespace])
     end
 
+    ##
+    # Figure out what attributes are currently permitted for serialization.
+    #
+    # @param requested_attrs [Array<Symbol>]
+    #     If present, this is the super set of attributes
+    #
+    # @param reload [Boolean]
+    #     If true, do not return a cached result, but get a fresh one
+    #
+    # @return [Array<Symbol>]
+    #     The list of permitted attributes for serialization
+    def permitted_attributes_filtered(requested_attrs = nil, reload = false)
+      @permitted_attributes_filtered = nil if reload
+      @permitted_attributes_filtered ||= begin
+        allowed = permitted_attributes_for_reading(reload)
+        if allowed == :all
+          requested_attrs || self.class._attributes_data.keys
+        else
+          return allowed if requested_attrs.nil?
+          Set.new(allowed) & Set.new(requested_attrs)
+        end
+      end
+
+      @permitted_attributes_filtered
+    end
+
+    ##
+    # Get the list of permitted attributes for reading from the given serializer
+    #
+    # @param reload [Boolean]
+    #     If true, ignore any cached value and build a fresh result
+    #
+    # @return [:all, Array<Symbol>]
+    #     :all, if nothing is restricted by a policy or there is no policy at all. The list of
+    #     attributes otherwise
+    def permitted_attributes_for_reading(reload = false)
+      @permitted_attributes_for_reading = nil if reload
+      @permitted_attributes_for_reading ||= begin
+        pol = policy
+        if pol.present? && pol.respond_to?(:permitted_attributes_for_reading)
+          pol.permitted_attributes_for_reading(instance_options[:serializer_namespace])
+        else
+          :all
+        end
+      end
+    end
+
     protected
 
     attr_accessor :instance_options
