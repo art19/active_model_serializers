@@ -155,8 +155,7 @@ module ActiveModel
     # @return [Boolean]
     #     true, if the serializer has access to a policy and the policy considers the attribute unpermitted.
     def unpermitted_attribute?(name)
-      policy.present? && policy.respond_to?(:unpermitted_attribute_for_reading?) &&
-                         policy.unpermitted_attribute_for_reading?(name, instance_options[:serializer_namespace])
+      !permitted_attributes_filtered.include?(name)
     end
 
     ##
