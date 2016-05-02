@@ -22,15 +22,20 @@ module ActiveModelSerializers
         # Add pagination if collection is paginated
         add_pagination_meta if collection?
 
-        if serializer.root != false
-          # Make included associations siblings of root to keep ED happy.
-          serialized   = { root => serialized }
-          root_node    = serialized[root]
+        return serialized if serializer.root == false
 
-          return serialized unless root_node.present?
+        # Make included associations siblings of root to keep ED happy.
+        root_key   = root
+        serialized = { root_key => serialized }
+        root_node  = serialized[root_key]
 
-          extract_keys = included_association_keys
-          [root_node].flatten.each { |obj| extract_included_assocations(serialized, obj, extract_keys) }
+        return serialized unless root_node.present?
+
+        extract_keys = included_association_keys
+        if root_node.is_a?(Array)
+          root_node.each { |obj| extract_included_assocations(serialized, obj, extract_keys) }
+        else
+          extract_included_assocations(serialized, root_node, extract_keys)
         end
 
         serialized
@@ -44,15 +49,15 @@ module ActiveModelSerializers
       def add_pagination_meta
         object = serializer.object
 
-        if object.respond_to?(:total_count) && object.respond_to?(:entry_name)
-          instance_options[:meta] ||= {}
-          instance_options[:meta].merge!(
-                                current_page: object.try(:current_page),
-                                next_page: object.try(:next_page),
-                                prev_page: object.try(:prev_page),
-                                total_pages: object.try(:total_pages),
-                                total_count: object.try(:total_count))
-        end
+        return instance_options unless object.respond_to?(:total_count) && object.respond_to?(:entry_name)
+
+        instance_options[:meta] ||= {}
+        instance_options[:meta].merge!(
+                              current_page: object.try(:current_page),
+                              next_page: object.try(:next_page),
+                              prev_page: object.try(:prev_page),
+                              total_pages: object.try(:total_pages),
+                              total_count: object.try(:total_count))
 
         instance_options
       end
@@ -70,10 +75,12 @@ module ActiveModelSerializers
       ##
       # @return [Enumerator] List of associations linked to the current serializer (or it's item serializer if it's a collection)
       def associations
-        unless collection?
-          serializer.associations
-        else
-          serializer.first.associations
+        @associations ||= begin
+          unless collection?
+            serializer.associations
+          else
+            serializer.first.associations
+          end
         end
       end
 
