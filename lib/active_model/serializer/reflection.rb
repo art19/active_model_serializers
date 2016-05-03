@@ -1,4 +1,5 @@
 require 'active_model/serializer/field'
+require 'new_relic/agent/method_tracer'
 
 module ActiveModel
   class Serializer
@@ -34,6 +35,8 @@ module ActiveModel
     # So you can inspect reflections in your Adapters.
     #
     class Reflection < Field
+      include ::NewRelic::Agent::MethodTracer
+
       def initialize(*)
         super
         @_links = {}
@@ -70,6 +73,7 @@ module ActiveModel
           serializer.read_attribute_for_serialization(name)
         end
       end
+      add_method_tracer :value
 
       # Build association. This method is used internally to
       # build serializer's association by its reflection.
@@ -115,6 +119,7 @@ module ActiveModel
 
         Association.new(name, serializer, reflection_options, @_links, @_meta)
       end
+      add_method_tracer :build_association
 
       protected
 

@@ -1,9 +1,13 @@
+require 'new_relic/agent/method_tracer'
+
 module ActiveModelSerializers
   module Adapter
     ##
     # JSON serializer adapter which supports side loaded associations currently expeded
     # by ART19's ember data version.
     class Art19EmberData < Base
+      include ::NewRelic::Agent::MethodTracer
+
       ##
       # Generate a hash of attributes for the current serializer
       #
@@ -22,19 +26,25 @@ module ActiveModelSerializers
         # Add pagination if collection is paginated
         add_pagination_meta if collection?
 
-        if serializer.root != false
-          # Make included associations siblings of root to keep ED happy.
-          serialized   = { root => serialized }
-          root_node    = serialized[root]
+        return serialized if serializer.root == false
 
-          return serialized unless root_node.present?
+        # Make included associations siblings of root to keep ED happy.
+        root_key   = root
+        serialized = { root_key => serialized }
+        root_node  = serialized[root_key]
 
-          extract_keys = included_association_keys
-          [root_node].flatten.each { |obj| extract_included_assocations(serialized, obj, extract_keys) }
+        return serialized unless root_node.present?
+
+        extract_keys = included_association_keys
+        if root_node.is_a?(Array)
+          root_node.each { |obj| extract_included_assocations(serialized, obj, extract_keys) }
+        else
+          extract_included_assocations(serialized, root_node, extract_keys)
         end
 
         serialized
       end
+      add_method_tracer :serializable_hash
 
       protected
 
@@ -44,18 +54,19 @@ module ActiveModelSerializers
       def add_pagination_meta
         object = serializer.object
 
-        if object.respond_to?(:total_count) && object.respond_to?(:entry_name)
-          instance_options[:meta] ||= {}
-          instance_options[:meta].merge!(
-                                current_page: object.try(:current_page),
-                                next_page: object.try(:next_page),
-                                prev_page: object.try(:prev_page),
-                                total_pages: object.try(:total_pages),
-                                total_count: object.try(:total_count))
-        end
+        return instance_options unless object.respond_to?(:total_count) && object.respond_to?(:entry_name)
+
+        instance_options[:meta] ||= {}
+        instance_options[:meta].merge!(
+                              current_page: object.try(:current_page),
+                              next_page: object.try(:next_page),
+                              prev_page: object.try(:prev_page),
+                              total_pages: object.try(:total_pages),
+                              total_count: object.try(:total_count))
 
         instance_options
       end
+      add_method_tracer :add_pagination_meta
 
       def extract_included_assocations(json, obj, keys = [])
         obj.each do |key, value|
@@ -66,16 +77,20 @@ module ActiveModelSerializers
           end
         end
       end
+      add_method_tracer :extract_included_assocations
 
       ##
       # @return [Enumerator] List of associations linked to the current serializer (or it's item serializer if it's a collection)
       def associations
-        unless collection?
-          serializer.associations
-        else
-          serializer.first.associations
+        @associations ||= begin
+          unless collection?
+            serializer.associations
+          else
+            serializer.first.associations
+          end
         end
       end
+      add_method_tracer :assocations
 
       ##
       # @return [Boolean] true, if the serializer is a collection serializer
@@ -91,12 +106,14 @@ module ActiveModelSerializers
           serializer.object.class.try(:base_class) || serializer.object.class
         end
       end
+      add_method_tracer :derived_class
 
       ##
       # @return [Array<String>] Names of all associations marked to be :included (side-loaded)
       def included_association_keys
         associations.select { |a| a.options.fetch(:include, false) }.collect(&:name)
       end
+      add_method_tracer :included_association_keys
 
       ##
       # Determine the name of the root node. For collection serializers we use the element-serializer class.
@@ -114,6 +131,7 @@ module ActiveModelSerializers
         return root_name.pluralize if collection?
         root_name
       end
+      add_method_tracer :root
     end
   end
 end

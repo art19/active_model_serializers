@@ -85,11 +85,12 @@ module ActiveModel
       #
       def associations(include_tree = DEFAULT_INCLUDE_TREE)
         return unless object
+        allowed = permitted_attributes_filtered.product([true]).to_h
 
         Enumerator.new do |y|
           self.class._reflections.each do |reflection|
-            next if reflection.excluded?(self)
             key = reflection.options.fetch(:key, reflection.name)
+            next unless allowed.key?(key) if permitted_attributes_for_reading != :all
             next unless include_tree.key?(key)
             y.yield reflection.build_association(self, instance_options)
           end

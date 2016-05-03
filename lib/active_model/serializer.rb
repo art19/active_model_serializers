@@ -11,6 +11,7 @@ require 'active_model/serializer/lint'
 require 'active_model/serializer/links'
 require 'active_model/serializer/meta'
 require 'active_model/serializer/type'
+require 'new_relic/agent/method_tracer'
 
 # ActiveModel::Serializer is an abstract class that is
 # reified when subclassed to decorate a resource.
@@ -23,6 +24,7 @@ module ActiveModel
     include Links
     include Meta
     include Type
+    include ::NewRelic::Agent::MethodTracer
 
     # @param resource [ActiveRecord::Base, ActiveModelSerializers::Model]
     # @return [ActiveModel::Serializer]
@@ -96,6 +98,14 @@ module ActiveModel
       end
     end
 
+    class << self
+      include ::NewRelic::Agent::MethodTracer
+
+      add_method_tracer :serializer_for
+      add_method_tracer :serializer_lookup_chain_for
+      add_method_tracer :get_serializer_for
+    end
+
     def self._serializer_instance_method_defined?(name)
       _serializer_instance_methods.include?(name)
     end
@@ -123,6 +133,7 @@ module ActiveModel
         end
       end
     end
+    add_method_tracer :initialize
 
     # Used by adapter as resource root.
     def json_key
@@ -138,6 +149,7 @@ module ActiveModel
         object.read_attribute_for_serialization(attr)
       end
     end
+    add_method_tracer :read_attribute_for_serialization
 
     ##
     # @return [ApplicationPolicy] A policy class for the serializer's object using the current scope
@@ -145,6 +157,7 @@ module ActiveModel
       return nil unless defined?(Pundit) && instance_options[:skip_policy] != true
       @pundit_policy ||= Pundit.policy(scope, object)
     end
+    add_method_tracer :policy
 
     ##
     # Figure out if the serializer is allowed to serialize an attribute/association
@@ -155,9 +168,58 @@ module ActiveModel
     # @return [Boolean]
     #     true, if the serializer has access to a policy and the policy considers the attribute unpermitted.
     def unpermitted_attribute?(name)
-      policy.present? && policy.respond_to?(:unpermitted_attribute_for_reading?) &&
-                         policy.unpermitted_attribute_for_reading?(name, instance_options[:serializer_namespace])
+      !permitted_attributes_filtered.include?(name)
     end
+    add_method_tracer :unpermitted_attribute?
+
+    ##
+    # Figure out what attributes are currently permitted for serialization.
+    #
+    # @param requested_attrs [Array<Symbol>]
+    #     If present, this is the super set of attributes
+    #
+    # @param reload [Boolean]
+    #     If true, do not return a cached result, but get a fresh one
+    #
+    # @return [Array<Symbol>]
+    #     The list of permitted attributes for serialization
+    def permitted_attributes_filtered(requested_attrs = nil, reload = false)
+      @permitted_attributes_filtered = nil if reload
+      @permitted_attributes_filtered ||= begin
+        allowed = permitted_attributes_for_reading(reload)
+        if allowed == :all
+          requested_attrs || self.class._attributes_data.keys
+        else
+          return allowed if requested_attrs.nil?
+          Set.new(allowed) & Set.new(requested_attrs)
+        end
+      end
+
+      @permitted_attributes_filtered
+    end
+    add_method_tracer :permitted_attributes_filtered
+
+    ##
+    # Get the list of permitted attributes for reading from the given serializer
+    #
+    # @param reload [Boolean]
+    #     If true, ignore any cached value and build a fresh result
+    #
+    # @return [:all, Array<Symbol>]
+    #     :all, if nothing is restricted by a policy or there is no policy at all. The list of
+    #     attributes otherwise
+    def permitted_attributes_for_reading(reload = false)
+      @permitted_attributes_for_reading = nil if reload
+      @permitted_attributes_for_reading ||= begin
+        pol = policy
+        if pol.present? && pol.respond_to?(:permitted_attributes_for_reading)
+          pol.permitted_attributes_for_reading(instance_options[:serializer_namespace])
+        else
+          :all
+        end
+      end
+    end
+    add_method_tracer :permitted_attributes_for_reading
 
     protected
 
