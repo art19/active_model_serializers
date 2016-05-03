@@ -9,6 +9,7 @@ module ActiveModel
           self._attributes_data ||= {}
         end
 
+        include ::NewRelic::Agent::MethodTracer
         extend ActiveSupport::Autoload
         autoload :Attribute
 
@@ -21,6 +22,7 @@ module ActiveModel
             hash[key] = attr.value(self) if attr.present?
           end
         end
+        add_method_tracer :attributes
       end
 
       module ClassMethods

@@ -11,6 +11,7 @@ require 'active_model/serializer/lint'
 require 'active_model/serializer/links'
 require 'active_model/serializer/meta'
 require 'active_model/serializer/type'
+require 'new_relic/agent/method_tracer'
 
 # ActiveModel::Serializer is an abstract class that is
 # reified when subclassed to decorate a resource.
@@ -23,6 +24,7 @@ module ActiveModel
     include Links
     include Meta
     include Type
+    include ::NewRelic::Agent::MethodTracer
 
     # @param resource [ActiveRecord::Base, ActiveModelSerializers::Model]
     # @return [ActiveModel::Serializer]
@@ -96,6 +98,14 @@ module ActiveModel
       end
     end
 
+    class << self
+      include ::NewRelic::Agent::MethodTracer
+
+      add_method_tracer :serializer_for
+      add_method_tracer :serializer_lookup_chain_for
+      add_method_tracer :get_serializer_for
+    end
+
     def self._serializer_instance_method_defined?(name)
       _serializer_instance_methods.include?(name)
     end
@@ -123,6 +133,7 @@ module ActiveModel
         end
       end
     end
+    add_method_tracer :initialize
 
     # Used by adapter as resource root.
     def json_key
@@ -138,6 +149,7 @@ module ActiveModel
         object.read_attribute_for_serialization(attr)
       end
     end
+    add_method_tracer :read_attribute_for_serialization
 
     ##
     # @return [ApplicationPolicy] A policy class for the serializer's object using the current scope
@@ -145,6 +157,7 @@ module ActiveModel
       return nil unless defined?(Pundit) && instance_options[:skip_policy] != true
       @pundit_policy ||= Pundit.policy(scope, object)
     end
+    add_method_tracer :policy
 
     ##
     # Figure out if the serializer is allowed to serialize an attribute/association
@@ -157,6 +170,7 @@ module ActiveModel
     def unpermitted_attribute?(name)
       !permitted_attributes_filtered.include?(name)
     end
+    add_method_tracer :unpermitted_attribute?
 
     ##
     # Figure out what attributes are currently permitted for serialization.
@@ -183,6 +197,7 @@ module ActiveModel
 
       @permitted_attributes_filtered
     end
+    add_method_tracer :permitted_attributes_filtered
 
     ##
     # Get the list of permitted attributes for reading from the given serializer
@@ -204,6 +219,7 @@ module ActiveModel
         end
       end
     end
+    add_method_tracer :permitted_attributes_for_reading
 
     protected
 

@@ -1,6 +1,9 @@
+require 'new_relic/agent/method_tracer'
+
 module ActiveModel
   class Serializer
     class CollectionSerializer
+      include ::NewRelic::Agent::MethodTracer
       NoSerializerError = Class.new(StandardError)
       include Enumerable
       delegate :each, to: :@serializers
@@ -22,6 +25,7 @@ module ActiveModel
           end
         end
       end
+      add_method_tracer :initialize
 
       def json_key
         root || derived_root
