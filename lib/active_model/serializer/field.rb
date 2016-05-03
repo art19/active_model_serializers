@@ -21,7 +21,6 @@ module ActiveModel
           serializer.read_attribute_for_serialization(name)
         end
       end
-      add_method_tracer :value, 'Custom/ActiveModel::Serializer::Field/value'
 
       # Decide whether the field should be serialized by the given serializer instance.
       # @param [Serializer] The serializer instance
@@ -41,7 +40,6 @@ module ActiveModel
           false
         end
       end
-      add_method_tracer :excluded?, 'Custom/ActiveModel::Serializer::Field/excluded?'
 
       private
 
