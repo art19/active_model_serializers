@@ -29,6 +29,8 @@ module ActiveModelSerializers
       private
 
       def serializable_hash_for_collection(options)
+        cache_attributes if ActiveModelSerializers.config.cache_store.present?
+
         result = []
         serializer.each do |s|
           result << Attributes.new(s, instance_options).serializable_hash(options)
@@ -99,7 +101,15 @@ module ActiveModelSerializers
       end
 
       def resource_object_for(options)
-        serializer.attributes(options[:fields])
+        return serializer.attributes(options[:fields]) unless ActiveModelSerializers.config.cache_store.present?
+
+        cached_serializer = CachedSerializer.new(serializer)
+
+        cached_attributes(cached_serializer) do
+          cached_serializer.cache_check(self) do
+            serializer.attributes(options[:fields])
+          end
+        end
       end
       add_method_tracer :resource_object_for
     end
