@@ -99,13 +99,7 @@ module ActiveModelSerializers
       end
 
       def resource_object_for(options)
-        cached_serializer = CachedSerializer.new(serializer)
-
-        cached_attributes(cached_serializer) do
-          cached_serializer.cache_check(self) do
-            serializer.attributes(options[:fields])
-          end
-        end
+        serializer.attributes(options[:fields])
       end
       add_method_tracer :resource_object_for
     end
