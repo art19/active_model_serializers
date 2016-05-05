@@ -17,9 +17,13 @@ module ActiveModel
         # by the serializer.
         def attributes(requested_attrs = nil, reload = false)
           @attributes = nil if reload
-          @attributes ||= permitted_attributes_filtered(requested_attrs, reload).each_with_object({}) do |key, hash|
-            attr = self.class._attributes_data[key]
-            hash[key] = attr.value(self) if attr.present?
+          @attributes ||= begin
+            hash = {}
+            permitted_attributes_filtered(requested_attrs, reload).each do |key|
+              attr = self.class._attributes_data[key]
+              hash[key] = attr.value(self) if attr.present?
+            end
+            hash
           end
         end
         add_method_tracer :attributes
@@ -71,11 +75,11 @@ module ActiveModel
         # @see Serializer::attribute
         # @see Adapter::FragmentCache#fragment_serializer
         def _attributes_keys
-          _attributes_data
-            .each_with_object({}) do |(key, attr), hash|
-              next if key == attr.name
-              hash[attr.name] = { key: key }
-            end
+          hash = {}
+          _attributes_data.each do |key, attr|
+            next if key == attr.name
+            hash[attr.name] = { key: key }
+          end
         end
       end
     end
