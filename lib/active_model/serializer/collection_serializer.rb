@@ -11,18 +11,18 @@ module ActiveModel
       attr_reader :object, :root
 
       def initialize(resources, options = {})
-        @root = options[:root]
-        @object = resources
-        @serializers = resources.map do |resource|
-          serializer_context_class = options.fetch(:serializer_context_class, ActiveModel::Serializer)
-          each_options = { serializer_namespace: options.fetch(:serializer_namespace, nil) }.compact
-          serializer_class = options.fetch(:serializer) { serializer_context_class.serializer_for(resource, each_options) }
+        @root        = options[:root]
+        @object      = resources
+        @serializers = []
 
-          if serializer_class.nil?
-            fail NoSerializerError, "No serializer found for resource: #{resource.inspect}"
-          else
-            serializer_class.new(resource, options.except(:serializer))
-          end
+        serializer_context_class = options.fetch(:serializer_context_class, ActiveModel::Serializer)
+        each_options             = { serializer_namespace: options.fetch(:serializer_namespace, nil) }.compact
+
+        resources.each do |resource|
+          serializer_class = options.fetch(:serializer) { serializer_context_class.serializer_for(resource, each_options) }
+          raise NoSerializerError, "No serializer found for resource: #{resource.inspect}" if serializer_class.nil?
+
+          @serializers << serializer_class.new(resource, options.except(:serializer))
         end
       end
       add_method_tracer :initialize

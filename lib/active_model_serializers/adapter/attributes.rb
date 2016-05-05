@@ -29,9 +29,11 @@ module ActiveModelSerializers
       private
 
       def serializable_hash_for_collection(options)
-        cache_attributes
-
-        serializer.map { |s| Attributes.new(s, instance_options).serializable_hash(options) }
+        result = []
+        serializer.each do |s|
+          result << Attributes.new(s, instance_options).serializable_hash(options)
+        end
+        result
       end
       add_method_tracer :serializable_hash_for_collection
 
