@@ -191,7 +191,7 @@ module ActiveModel
           requested_attrs || self.class._attributes_data.keys
         else
           return allowed if requested_attrs.nil?
-          Set.new(allowed) & Set.new(requested_attrs)
+          allowed & requested_attrs
         end
       end
 
