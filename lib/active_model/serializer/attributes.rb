@@ -80,6 +80,7 @@ module ActiveModel
             next if key == attr.name
             hash[attr.name] = { key: key }
           end
+          hash
         end
       end
     end

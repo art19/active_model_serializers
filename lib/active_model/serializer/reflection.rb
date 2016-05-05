@@ -40,6 +40,7 @@ module ActiveModel
       def initialize(*)
         super
         @_links = {}
+        @_meta  = nil
         @_include_data = true
       end
 
