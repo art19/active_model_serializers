@@ -40,6 +40,7 @@ module ActiveModel
       def initialize(*)
         super
         @_links = {}
+        @_meta  = nil
         @_include_data = true
       end
 
@@ -56,6 +57,17 @@ module ActiveModel
       def include_data(value = true)
         @_include_data = value
         :nil
+      end
+
+      def excluded?(serializer)
+        case condition_type
+        when :if
+          !serializer.public_send(condition)
+        when :unless
+          serializer.public_send(condition)
+        else
+          false
+        end
       end
 
       def value(serializer)

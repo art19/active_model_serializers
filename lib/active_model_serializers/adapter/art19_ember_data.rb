@@ -36,6 +36,8 @@ module ActiveModelSerializers
         return serialized unless root_node.present?
 
         extract_keys = included_association_keys
+        return serialized if extract_keys.empty?
+
         if root_node.is_a?(Array)
           root_node.each { |obj| extract_included_assocations(serialized, obj, extract_keys) }
         else
@@ -68,29 +70,24 @@ module ActiveModelSerializers
       end
       add_method_tracer :add_pagination_meta
 
+      ##
+      # Move the given associations within objects into a collection of the same name in the target JSON
+      #
+      # @param json [Hash] the target object
+      # @param obj [Hash] the current object to extract data from
+      # @param keys [Array<Symbol>] List of association keys to extract from each object
+      #
+      # @return [nil]
       def extract_included_assocations(json, obj, keys = [])
-        obj.each do |key, value|
-          if keys.include?(key)
-            json[key] = [] unless json.keys.include?(key)
-            value.each { |item| json[key] << item }
-            obj.delete key
-          end
+        keys.each do |key|
+          next unless obj.key?(key)
+          json[key] = [] unless json.key?(key)
+          json[key].concat(obj[key])
+          obj.delete key
         end
+        nil
       end
       add_method_tracer :extract_included_assocations
-
-      ##
-      # @return [Enumerator] List of associations linked to the current serializer (or it's item serializer if it's a collection)
-      def associations
-        @associations ||= begin
-          unless collection?
-            serializer.associations
-          else
-            serializer.first.associations
-          end
-        end
-      end
-      add_method_tracer :assocations
 
       ##
       # @return [Boolean] true, if the serializer is a collection serializer
@@ -111,7 +108,16 @@ module ActiveModelSerializers
       ##
       # @return [Array<String>] Names of all associations marked to be :included (side-loaded)
       def included_association_keys
-        associations.select { |a| a.options.fetch(:include, false) }.collect(&:name)
+        result = []
+
+        unless collection?
+          serializer._reflections
+        else
+          serializer.first._reflections
+        end.each do |assoc|
+          result << assoc.name if assoc.options.fetch(:include, false)
+        end
+        result
       end
       add_method_tracer :included_association_keys
 

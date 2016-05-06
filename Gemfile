@@ -44,5 +44,6 @@ group :test do
 end
 
 group :development, :test do
+  gem 'newrelic_rpm'
   gem 'rubocop', '~> 0.34.0', require: false
 end
