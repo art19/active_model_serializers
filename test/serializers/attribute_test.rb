@@ -96,28 +96,30 @@ module ActiveModel
         assert_equal(expected, hash)
       end
 
-      def test_conditional_attributes
-        serializer = Class.new(ActiveModel::Serializer) do
-          attribute :if_attribute_included, if: :true
-          attribute :if_attribute_excluded, if: :false
-          attribute :unless_attribute_included, unless: :false
-          attribute :unless_attribute_excluded, unless: :true
+      # This is not implemented this way anymore in ART19
+      #
+      # def test_conditional_attributes
+      #   serializer = Class.new(ActiveModel::Serializer) do
+      #     attribute :if_attribute_included, if: :true
+      #     attribute :if_attribute_excluded, if: :false
+      #     attribute :unless_attribute_included, unless: :false
+      #     attribute :unless_attribute_excluded, unless: :true
 
-          def true
-            true
-          end
+      #     def true
+      #       true
+      #     end
 
-          def false
-            false
-          end
-        end
+      #     def false
+      #       false
+      #     end
+      #   end
 
-        model = ::Model.new
-        hash = serializable(model, serializer: serializer).serializable_hash
-        expected = { if_attribute_included: nil, unless_attribute_included: nil }
+      #   model = ::Model.new
+      #   hash = serializable(model, serializer: serializer).serializable_hash
+      #   expected = { if_attribute_included: nil, unless_attribute_included: nil }
 
-        assert_equal(expected, hash)
-      end
+      #   assert_equal(expected, hash)
+      # end
     end
   end
 end
